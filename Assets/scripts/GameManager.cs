@@ -180,7 +180,7 @@ public class GameManager : MonoBehaviour
             }
             yield return new WaitForSeconds(1f);
             isAutobetInstanceDone = true;
-            if (isAutoBetPlaying)
+            if (!isAutoBetPlaying)
             {
                 touchDisable.SetActive(false);
             }
