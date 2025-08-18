@@ -30,7 +30,7 @@ public static class PlayModeStopHandler
             if (targetScript != null)
             {
                 Debug.Log("disconnectRan");
-                targetScript.CloseSocket(); // Call your desired method
+               // targetScript.CloseSocket(); // Call your desired method
             }
             else
             {

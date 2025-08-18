@@ -6,7 +6,7 @@ using TMPro;
 
 public class GameManager : MonoBehaviour
 {
-    
+
     [SerializeField]
     int marblesToSpawn = 2;
     [Header("Buttons")]
@@ -29,6 +29,8 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private Button autoBet_Stop;
 
+    [SerializeField] private Button Turbo_Button;
+
     private double currentTotalBet = 0;
     private double currentBalance;
     internal int BetCounter;
@@ -45,6 +47,9 @@ public class GameManager : MonoBehaviour
     List<Vector3> cubeRotaionPoints = new List<Vector3>();
     [SerializeField]
     List<cubeRotation> cubes = new List<cubeRotation>();
+
+     [SerializeField]
+    List<cubeRotation> Dummycubes = new List<cubeRotation>();
     [SerializeField]
     private TMP_Text TotalBet_text;
     [SerializeField]
@@ -55,7 +60,7 @@ public class GameManager : MonoBehaviour
     private TMP_Text autoBetCount_text;
     [SerializeField]
     TMP_InputField autoBetField;
-    internal int autoBetTotalCount,autoBetCurrentCount;
+    internal int autoBetTotalCount, autoBetCurrentCount;
     [SerializeField]
     internal float autoBetFrequency = 0.5f;
     bool isAutoBetPlaying;
@@ -65,15 +70,17 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     AudioManager audioManager;
     [SerializeField]
-    SocketIOManager socketIoManager;  
+    SocketIOManager socketIoManager;
     [SerializeField]
     internal UiManager uiManager;
     internal gameType _gameType = gameType.TWELVE;
     int currentLines = 20;
     int riskfactor = 0;
-    bool isAutoBet,isAutobetInstanceDone,autobetRunning;
+    bool isAutoBet, isAutobetInstanceDone, autobetRunning;
     [SerializeField] GameObject autoBetpanel;
     [SerializeField] GameObject touchDisable;
+
+    public bool IsTurboOn = false;
     public enum marbleType
     {
         RED,
@@ -87,8 +94,11 @@ public class GameManager : MonoBehaviour
         SIXTEEN
     }
 
+    [SerializeField] private List<Sprite> TurboSprites = new List<Sprite>();
+
     private void Start()
     {
+        IsTurboOn = false;
         if (TBetPlus_Button) TBetPlus_Button.onClick.RemoveAllListeners();
         if (TBetPlus_Button) TBetPlus_Button.onClick.AddListener(delegate { ChangeBet(true); });
 
@@ -116,7 +126,11 @@ public class GameManager : MonoBehaviour
         if (highRisk_Button) highRisk_Button.onClick.RemoveAllListeners();
         if (highRisk_Button) highRisk_Button.onClick.AddListener(delegate { changeRiskFactor("high"); });
 
-       
+        if (Turbo_Button) Turbo_Button.onClick.RemoveAllListeners();
+        if (Turbo_Button) Turbo_Button.onClick.AddListener(delegate { TurboToggle(); });
+
+
+
     }
 
 
@@ -124,15 +138,16 @@ public class GameManager : MonoBehaviour
 
     internal void setInitialUI()
     {
-        currentBalance = socketIoManager.playerdata.Balance;
-        balance_text.text = socketIoManager.playerdata.Balance.ToString("f3");
-        currentTotalBet = socketIoManager.initialData.Bets[0];
-        if (TotalBet_text) TotalBet_text.text = (socketIoManager.initialData.Bets[BetCounter]).ToString("f2");
-        currentTotalBet = socketIoManager.initialData.Bets[BetCounter];
+        currentBalance = socketIoManager.playerdata.balance;
+        balance_text.text = socketIoManager.playerdata.balance.ToString("f3");
+        currentTotalBet = socketIoManager.initialData.bets[0];
+        if (TotalBet_text) TotalBet_text.text = (socketIoManager.initialData.bets[BetCounter]).ToString("f2");
+        currentTotalBet = socketIoManager.initialData.bets[BetCounter];
         changeRiskFactor("low");
 
 
     }
+
 
 
 
@@ -149,7 +164,7 @@ public class GameManager : MonoBehaviour
         {
             isAutoBetPlaying = true;
             autoBetCurrentCount = autoBetTotalCount;
-            autoBetCoroutine =  StartCoroutine(startAutoBet());
+            autoBetCoroutine = StartCoroutine(startAutoBet());
         }
 
     }
@@ -157,7 +172,8 @@ public class GameManager : MonoBehaviour
 
     IEnumerator accumulateResult()
     {
-
+        win_text.text = "0.00";
+        ToggleButtons(false);
         if (currentBalance < currentTotalBet)
         {
             lowBalance();
@@ -168,25 +184,29 @@ public class GameManager : MonoBehaviour
             touchDisable.SetActive(true);
             updateBalance(currentTotalBet, false);
             //socketIoManager.AccumulateResult(socketIoManager.initialData.Bets[BetCounter], rowDropDown.value, riskDropDown.value);
-            socketIoManager.AccumulateResult(BetCounter, currentLines,1, riskfactor);
+            socketIoManager.AccumulateResult(BetCounter, currentLines, 1, riskfactor);
             yield return new WaitUntil(() => socketIoManager.isResultdone);
-            List<int> cubeSides = socketIoManager.ConvertListListIntToListint(socketIoManager.resultData.resultSymbolMatrix);
-            win_text.text = socketIoManager.playerdata.currentWining.ToString("f2");
-            balance_text.text = socketIoManager.playerdata.Balance.ToString("f2");
+            List<int> cubeSides = socketIoManager.ConvertStringsToIntegers(socketIoManager.resultData.matrix);
+
+            balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
+            float WaitTimer = 2.5f;
+            if (IsTurboOn) WaitTimer = 1f;
             for (int i = 0; i < cubes.Count; i++)
             {
-                
-                cubes[i].StartRotation(cubeRotaionPoints[cubeSides[i]]);
+
+                cubes[i].StartRotation(cubeRotaionPoints[cubeSides[i]], WaitTimer);
             }
+            win_text.text = socketIoManager.resultData.payload.winAmount.ToString("f2");
             yield return new WaitForSeconds(1f);
             isAutobetInstanceDone = true;
             if (!isAutoBetPlaying)
             {
                 touchDisable.SetActive(false);
             }
+            ToggleButtons(true);
 
         }
-           
+
     }
 
 
@@ -203,7 +223,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    internal void updateBalance(double amount,bool add)
+    internal void updateBalance(double amount, bool add)
     {
         if (add)
         {
@@ -221,13 +241,13 @@ public class GameManager : MonoBehaviour
 
     internal void checkForFallingMarbles()
     {
-        if(totalMarbleInAction == 0)
+        if (totalMarbleInAction == 0)
         {
             toggleUI(true);
         }
     }
 
-   
+
     void gameMode(bool autoBet)
     {
         isAutoBet = autoBet;
@@ -252,7 +272,7 @@ public class GameManager : MonoBehaviour
         if (IncDec)
         {
             BetCounter++;
-            if (BetCounter >= socketIoManager.initialData.Bets.Count)
+            if (BetCounter >= socketIoManager.initialData.bets.Count)
             {
                 BetCounter = 0;
             }
@@ -262,20 +282,20 @@ public class GameManager : MonoBehaviour
             BetCounter--;
             if (BetCounter < 0)
             {
-                BetCounter = socketIoManager.initialData.Bets.Count - 1;
+                BetCounter = socketIoManager.initialData.bets.Count - 1;
             }
         }
-        if (TotalBet_text) TotalBet_text.text = (socketIoManager.initialData.Bets[BetCounter]).ToString("f2");
-        currentTotalBet = socketIoManager.initialData.Bets[BetCounter];
+        if (TotalBet_text) TotalBet_text.text = (socketIoManager.initialData.bets[BetCounter]).ToString("f2");
+        currentTotalBet = socketIoManager.initialData.bets[BetCounter];
 
     }
 
-   
+
 
 
     private void changeRiskFactor(string risk)
     {
-       
+
         Debug.Log(risk);
         for (int i = 0; i < riskContainers.Count; i++)
         {
@@ -287,9 +307,9 @@ public class GameManager : MonoBehaviour
                 {
                     riskfactor = 0;
                     int containerMultiplier = 3;
-                    for (int i = 0; i < socketIoManager.initialData.multiplier[0].Count; i++)
+                    for (int i = 0; i < socketIoManager.initialData.multipliers[0].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier +"\n"+socketIoManager.initialData.multiplier[0][i].ToString()+"X";
+                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[0][i].ToString() + "X";
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }
@@ -297,15 +317,15 @@ public class GameManager : MonoBehaviour
                     highRisk_Button.image.color = hideButtonCol;
                     lowRisk_Button.image.color = highlightButtonCol;
                     break;
-                   
+
                 }
             case "medium":
                 {
                     riskfactor = 1;
                     int containerMultiplier = 4;
-                    for (int i = 0; i < socketIoManager.initialData.multiplier[1].Count; i++)
+                    for (int i = 0; i < socketIoManager.initialData.multipliers[1].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multiplier[1][i].ToString() + "X";
+                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[1][i].ToString() + "X";
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }
@@ -318,9 +338,9 @@ public class GameManager : MonoBehaviour
                 {
                     riskfactor = 2;
                     int containerMultiplier = 5;
-                    for (int i = 0; i < socketIoManager.initialData.multiplier[2].Count; i++)
+                    for (int i = 0; i < socketIoManager.initialData.multipliers[2].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multiplier[2][i].ToString() + "X";
+                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[2][i].ToString() + "X";
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }
@@ -336,7 +356,7 @@ public class GameManager : MonoBehaviour
 
     IEnumerator startAutoBet()
     {
-       
+
         autoBet_Stop.gameObject.SetActive(true);
         Debug.Log(autoBetCurrentCount);
         autobetRunning = true;
@@ -346,15 +366,15 @@ public class GameManager : MonoBehaviour
             StartCoroutine(accumulateResult());
             yield return new WaitUntil(() => isAutobetInstanceDone);
             yield return new WaitForSeconds(2f);
-          
+
             autoBetCount_text.text = "Stop Auto Bet " + (autoBetTotalCount - i).ToString();
         }
         autobetRunning = false;
         touchDisable.SetActive(false);
         isAutoBetPlaying = false;
         autoBet_Stop.gameObject.SetActive(false);
-        
-       
+
+
 
 
     }
@@ -362,7 +382,7 @@ public class GameManager : MonoBehaviour
     void stopAutoBet()
     {
 
-       
+
         autoBet_Stop.gameObject.SetActive(false);
         StopCoroutine(autoBetCoroutine);
     }
@@ -370,11 +390,41 @@ public class GameManager : MonoBehaviour
 
     private void toggleUI(bool toggle)
     {
-        
+
         TBetPlus_Button.interactable = toggle;
         TBetMinus_Button.interactable = toggle;
-       
-      
+
+
+    }
+
+    private void TurboToggle()
+    {
+        if (IsTurboOn)
+        {
+            IsTurboOn = false;
+            Turbo_Button.image.sprite = TurboSprites[0];
+        }
+        else
+        {
+            IsTurboOn = true;
+            Turbo_Button.image.sprite = TurboSprites[1];
+        }
+    }
+
+    private void ToggleButtons(bool toggle)
+    {
+        TBetPlus_Button.interactable=toggle;
+        TBetMinus_Button.interactable=toggle;
+        sendBet_Button.interactable=toggle;
+        lowRisk_Button.interactable=toggle;
+        mediumRisk_Button.interactable=toggle;
+        highRisk_Button.interactable=toggle;
+        manualBetButton.interactable=toggle;
+        autoBet_Button.interactable=toggle;
+        autoBet_Stop.interactable=toggle;
+        
+               // TBetPlus_Button.interactable=toggle;
+
     }
 
 

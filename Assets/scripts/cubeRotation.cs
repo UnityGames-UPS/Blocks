@@ -16,6 +16,8 @@ public class cubeRotation : MonoBehaviour
     [SerializeField]
     int jumpCount = 1;
     float zPosition;
+        [SerializeField] float totalDuration ; 
+
     void Start()
     {
 
@@ -25,11 +27,23 @@ public class cubeRotation : MonoBehaviour
         zPosition = cubeTransform.position.z;
     }
 
-    internal void StartRotation(Vector3 rotate)
+    internal void StartRotation(Vector3 rotate, float duration)
     {
-       
-        cubeTransform.DOLocalRotate(rotate, rotationSpeed);
-        cubeTransform.DOMoveZ(
-            cubeTransform.position.z - 5f,speed).SetEase(Ease.OutQuad).OnComplete(() => {cubeTransform.DOMoveZ(zPosition,speed).SetEase(Ease.InQuad);});
+        totalDuration = duration;
+
+        // cubeTransform.DOLocalRotate(rotate, rotationSpeed);
+        // cubeTransform.DOMoveZ(
+        //     cubeTransform.position.z - 5f,speed).SetEase(Ease.OutQuad).OnComplete(() => {cubeTransform.DOMoveZ(zPosition,speed).SetEase(Ease.InQuad);});
+
+        float rotationTime = totalDuration * 0.3f;
+        float moveForwardTime = totalDuration * 0.35f;
+        float moveBackwardTime = totalDuration * 0.35f;
+
+        // do the sequence
+        Sequence seq = DOTween.Sequence();
+        seq.Append(cubeTransform.DOLocalRotate(rotate, rotationTime))
+           .Join(cubeTransform.DOMoveZ(cubeTransform.position.z - 7f, moveForwardTime).SetEase(Ease.OutQuad))
+           .Append(cubeTransform.DOMoveZ(zPosition, moveBackwardTime).SetEase(Ease.InQuad));
     }
+    
 }
