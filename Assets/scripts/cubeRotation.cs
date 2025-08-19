@@ -2,22 +2,26 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.UI;
+//using Microsoft.Unity.VisualStudio.Editor;
 
 public class cubeRotation : MonoBehaviour
 {
     int currentFace;
     internal float rotation;
     [SerializeField]
-    Transform cubeTransform;  
+    Transform cubeTransform;
     [SerializeField]
-    float speed,rotationSpeed = 1f;
+    float speed, rotationSpeed = 1f;
     [SerializeField]
     float jumpPower = 2f;
     [SerializeField]
     int jumpCount = 1;
     float zPosition;
-        [SerializeField] float totalDuration ; 
+    [SerializeField] float totalDuration;
+    [SerializeField] private Image AnimImage;
 
+    [SerializeField] private List<Image> AnimationObject = new List<Image>();
     void Start()
     {
 
@@ -44,6 +48,28 @@ public class cubeRotation : MonoBehaviour
         seq.Append(cubeTransform.DOLocalRotate(rotate, rotationTime))
            .Join(cubeTransform.DOMoveZ(cubeTransform.position.z - 7f, moveForwardTime).SetEase(Ease.OutQuad))
            .Append(cubeTransform.DOMoveZ(zPosition, moveBackwardTime).SetEase(Ease.InQuad));
+
+    }
+
+    internal void EnableAnimObjects()
+    {
+        Debug.Log($"Win animation enable 1");
+       foreach (Image img in AnimationObject)
+        {
+            // Color c = img.color;
+            // c.a = 0f;
+            img.gameObject.SetActive(true);
+        }
+    }
+
+    internal void ResetAnimObject()
+    {
+        foreach (Image img in AnimationObject)
+        {
+            // Color c = img.color;
+            // c.a = 0f;
+            img.gameObject.SetActive(false);
+        }
     }
     
 }

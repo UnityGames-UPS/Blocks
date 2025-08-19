@@ -79,6 +79,11 @@ public class SocketIOManager : MonoBehaviour
         //OpenWebsocket();
         OpenSocket();
     }
+    void CloseGame()
+    {
+        Debug.Log("Unity: Closing Game");
+        StartCoroutine(CloseSocket());
+    }
 
     void ReceiveAuthToken(string jsonData)
     {
@@ -491,22 +496,22 @@ public class SocketIOManager : MonoBehaviour
     }
 
     public List<int> ConvertStringsToIntegers(List<List<string>> inputList)
-{
-    List<int> outputList = new List<int>();
-
-    foreach (var row in inputList)
     {
-        foreach (var item in row)
+        List<int> outputList = new List<int>();
+
+        foreach (var row in inputList)
         {
-            if (int.TryParse(item, out int number))
+            foreach (var item in row)
             {
-                outputList.Add(number);
+                if (int.TryParse(item, out int number))
+                {
+                    outputList.Add(number);
+                }
             }
         }
-    }
 
-    return outputList;
-}
+        return outputList;
+    }
 
     private List<string> TransformAndRemoveRecurring(List<List<string>> originalList)
     {

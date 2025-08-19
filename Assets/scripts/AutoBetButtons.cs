@@ -12,6 +12,9 @@ public class AutoBetButtons : MonoBehaviour
     [SerializeField]
     GameManager gameManager;
 
+    [SerializeField] private AudioManager audioManager;
+
+
     private void Start()
     {
         button.onClick.AddListener(onButtonClick);
@@ -20,11 +23,13 @@ public class AutoBetButtons : MonoBehaviour
     void onButtonClick()
     {
         Debug.Log(autobetCount);
+        audioManager.PlayWLAudio("toggle");
         gameManager.autoBetTotalCount = autobetCount;
         for (int i = 0; i < gameManager.autoButtons.Count; i++)
         {
             gameManager.autoButtons[i].button.interactable = true;
         }
         button.interactable = false;
+        gameManager.sendBet_Button.interactable = true;
     }
 }
