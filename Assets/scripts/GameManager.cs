@@ -202,6 +202,7 @@ public class GameManager : MonoBehaviour
         cubeSides.Clear();
         ToggleButtons(false);
         balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
+        currentBalance = socketIoManager.playerdata.balance;
         if (currentBalance < currentTotalBet)
         {
             lowBalance();
@@ -264,6 +265,7 @@ public class GameManager : MonoBehaviour
             autoBet_Stop.gameObject.SetActive(false);
             autoBetCount_text.text = "Stop Auto Bet ";
         }
+        uiManager.LowBalPopup();
     }
 
     internal void updateBalance(double amount, bool add)
