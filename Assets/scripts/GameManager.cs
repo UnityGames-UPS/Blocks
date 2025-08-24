@@ -38,6 +38,9 @@ public class GameManager : MonoBehaviour
     internal int BallCounter;
     [SerializeField]
     List<TextMeshProUGUI> riskContainers = new List<TextMeshProUGUI>();
+
+    [SerializeField] private List<GameObject> RiskContainersWinObject = new List<GameObject>();
+    private string CurrentRiskType = "";
     [SerializeField]
     internal List<AutoBetButtons> autoButtons = new List<AutoBetButtons>();
     [SerializeField]
@@ -152,6 +155,7 @@ public class GameManager : MonoBehaviour
         if (Turbo_Button) Turbo_Button.onClick.RemoveAllListeners();
         if (Turbo_Button) Turbo_Button.onClick.AddListener(delegate { TurboToggle(); audioManager.PlayButtonAudio(); });
         Manual_text.color = highlightTextsCol;
+        ResetMultiplierWinObject();
 
 
     }
@@ -168,6 +172,7 @@ public class GameManager : MonoBehaviour
         currentTotalBet = socketIoManager.initialData.bets[BetCounter];
         BetFilled_image.fillAmount = (float)(BetCounter + 1) / (float)socketIoManager.initialData.bets.Count;
         changeRiskFactor("low");
+        CurrentRiskType = "low";
 
 
     }
@@ -197,52 +202,51 @@ public class GameManager : MonoBehaviour
 
     IEnumerator accumulateResult()
     {
-        win_text.text = "";
-        ResetAnimCubeObject();
-        cubeSides.Clear();
-        ToggleButtons(false);
-        balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
+        ResetMultiplierWinObject();
         currentBalance = socketIoManager.playerdata.balance;
         if (currentBalance < currentTotalBet)
         {
             lowBalance();
             yield break;
         }
-        else
+        win_text.text = "";
+        ResetAnimCubeObject();
+        cubeSides.Clear();
+        ToggleButtons(false);
+        balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
+        // else
+        // {
+        touchDisable.SetActive(true);
+        updateBalance(currentTotalBet, false);
+        //socketIoManager.AccumulateResult(socketIoManager.initialData.Bets[BetCounter], rowDropDown.value, riskDropDown.value);
+        socketIoManager.AccumulateResult(BetCounter, currentLines, 1, riskfactor);
+        yield return new WaitUntil(() => socketIoManager.isResultdone);
+        cubeSides = socketIoManager.ConvertStringsToIntegers(socketIoManager.resultData.matrix);
+        float WaitTimer = 2.5f;
+        if (IsTurboOn) WaitTimer = 1f;
+
+        for (int i = 0; i < Maincubes.Count; i++)
         {
-            touchDisable.SetActive(true);
-            updateBalance(currentTotalBet, false);
-            //socketIoManager.AccumulateResult(socketIoManager.initialData.Bets[BetCounter], rowDropDown.value, riskDropDown.value);
-            socketIoManager.AccumulateResult(BetCounter, currentLines, 1, riskfactor);
-            yield return new WaitUntil(() => socketIoManager.isResultdone);
-            cubeSides = socketIoManager.ConvertStringsToIntegers(socketIoManager.resultData.matrix);
-            float WaitTimer = 2.5f;
-            if (IsTurboOn) WaitTimer = 1f;
-            // for (int i = 0; i < cubes.Count; i++)
-            // {
-
-            //     cubes[i].StartRotation(cubeRotaionPoints[cubeSides[i]], WaitTimer);
-            // }
-
-            for (int i = 0; i < Maincubes.Count; i++)
-            {
-                Maincubes[i].StartRotation(cubeRotaionPoints[cubeSides[i]], WaitTimer);
-            }
-
-            yield return new WaitForSeconds(1f);
-            isAutobetInstanceDone = true;
-            if (!isAutoBetPlaying)
-            {
-                touchDisable.SetActive(false);
-            }
-            //CheckWin();
-            yield return StartCoroutine(CheckWin());
-            win_text.text = socketIoManager.resultData.payload.winAmount.ToString("f2");
-            balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
-            ToggleButtons(true);
-            if (isAutoBetPlaying) yield return new WaitForSeconds(1f);
-
+            Maincubes[i].StartRotation(cubeRotaionPoints[cubeSides[i]], WaitTimer);
         }
+
+        yield return new WaitForSeconds(1f);
+        isAutobetInstanceDone = true;
+
+        Debug.Log($"########### auto bet playing " + isAutoBetPlaying);
+        //CheckWin();
+        yield return StartCoroutine(CheckWin());
+        win_text.text = socketIoManager.resultData.payload.winAmount.ToString("f2");
+        balance_text.text = socketIoManager.playerdata.balance.ToString("f2");
+        if (!isAutoBetPlaying)
+        {
+            touchDisable.SetActive(false);
+        }
+        ToggleButtons(true);
+        if (isAutoBetPlaying) yield return new WaitForSeconds(2f);
+
+
+        // }
 
     }
     void ResetAnimCubeObject()
@@ -305,6 +309,7 @@ public class GameManager : MonoBehaviour
             autoBet_Button.image.color = highlightButtonCol;
             Manual_text.color = hideTextsCol;
             Auto_text.color = highlightTextsCol;
+            ResetAutospinsbuttons();
         }
         else
         {
@@ -352,7 +357,8 @@ public class GameManager : MonoBehaviour
 
     private void changeRiskFactor(string risk)
     {
-
+        CurrentRiskType = risk;
+        ResetMultiplierWinObject();
         Debug.Log(risk);
         for (int i = 0; i < riskContainers.Count; i++)
         {
@@ -423,7 +429,12 @@ public class GameManager : MonoBehaviour
 
     IEnumerator startAutoBet()
     {
-
+        currentBalance = socketIoManager.playerdata.balance;
+        if (currentBalance < currentTotalBet)
+        {
+            lowBalance();
+            yield break;
+        }
         autoBet_Stop.gameObject.SetActive(true);
         sendBet_Button.gameObject.SetActive(false);
         Debug.Log(autoBetCurrentCount);
@@ -461,7 +472,9 @@ public class GameManager : MonoBehaviour
         sendBet_Button.gameObject.SetActive(true);
         sendBet_Button.interactable = true;
         StopCoroutine(autoBetCoroutine);
+        isAutoBetPlaying = false;
         touchDisable.SetActive(false);
+
     }
 
 
@@ -540,9 +553,10 @@ public class GameManager : MonoBehaviour
                 }
             }
             win_text.text = socketIoManager.resultData.payload.winAmount.ToString("f2");
-             audioManager.PlayWLAudio("win");
+            audioManager.PlayWLAudio("win");
+            CheckForWinningMultiplier();
             yield return new WaitForSeconds(0.5f);
-           
+
             yield break; // exits here immediately
 
         }
@@ -552,5 +566,103 @@ public class GameManager : MonoBehaviour
             yield break;
         }
     }
+
+    //     public void CheckForWinningMultiplier()
+    // {
+    //     foreach (var winningColor in socketIoManager.resultData.payload.winingColors)
+    //     {
+    //         int multiplierCount = cubeSides.Count(side => side == winningColor);
+    //         EnableMultiplierWin(multiplierCount);
+    //     }
+    // }
+
+    // void EnableMultiplierWin(int winIndex)
+    // {
+    //     int riskIndex = CurrentRiskType switch
+    //     {
+    //         "low"    => 0,
+    //         "medium" => 1,
+    //         "high"   => 2,
+    //         _        => -1
+    //     };
+
+    //     if (riskIndex == -1) return;
+
+    //     var multipliers = socketIoManager.initialData.multipliers[riskIndex];
+    //     for (int i = 0; i < multipliers.Count; i++)
+    //     {
+    //         if (multipliers[i] == winIndex)
+    //         {
+    //             RiskContainersWinObject[i].gameObject.SetActive(true);
+    //             break;
+    //         }
+    //     }
+    // }
+    public void CheckForWinningMultiplier()
+    {
+        if (socketIoManager.resultData.payload.winingColors.Count > 0)
+        {
+            for (int i = 0; i < socketIoManager.resultData.payload.winingColors.Count; i++)
+            {
+                int MultiplierCount = 0;
+                for (int j = 0; j < cubeSides.Count; j++)
+                {
+                    if (socketIoManager.resultData.payload.winingColors[i] == cubeSides[j])
+                    {
+                        MultiplierCount++;
+                    }
+                }
+                EnableMultiplierWin(MultiplierCount);
+            }
+        }
+    }
+
+    void EnableMultiplierWin(int winIndex)
+    {
+        if (CurrentRiskType == "low")
+        {
+            int containerMultiplier = 3;
+            int multiplierindex = winIndex - containerMultiplier;
+            RiskContainersWinObject[multiplierindex].gameObject.SetActive(true);
+        }
+
+        if (CurrentRiskType == "medium")
+        {
+            int containerMultiplier = 4;
+            int multiplierindex = winIndex - containerMultiplier;
+            RiskContainersWinObject[multiplierindex].gameObject.SetActive(true);
+        }
+
+        if (CurrentRiskType == "high")
+        {
+            int containerMultiplier = 5;
+            int multiplierindex = winIndex - containerMultiplier;
+            RiskContainersWinObject[multiplierindex].gameObject.SetActive(true);
+        }
+
+    }
+
+    void ResetMultiplierWinObject()
+    {
+        for (int i = 0; i < RiskContainersWinObject.Count; i++)
+        {
+            RiskContainersWinObject[i].SetActive(false);
+        }
+
+    }
+
+
+    void ResetAutospinsbuttons()
+    {
+        for (int i = 0; i < autoButtons.Count; i++)
+        {
+            autoButtons[i].button.interactable = true;
+          //  autoButtons[i].button.GetComponent<Image>().sprite = GraySprite;
+        }
+    }
+
+
+
+
 
 }
