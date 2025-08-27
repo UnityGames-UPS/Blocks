@@ -102,6 +102,8 @@ public class UiManager : MonoBehaviour
     private Button GameExit_Button;
     [SerializeField]
     private GameManager gameManager;
+    [SerializeField] private Scrollbar infoscrollbar;
+
 
     [SerializeField]
     private AudioManager audioController;
@@ -109,12 +111,13 @@ public class UiManager : MonoBehaviour
     bool isMusic;
     bool isSound;
 
+
     private void Start()
     {
 
 
         if (Paytable_Button) Paytable_Button.onClick.RemoveAllListeners();
-        if (Paytable_Button) Paytable_Button.onClick.AddListener(delegate { OpenPopup(PaytablePopup_Object); });
+        if (Paytable_Button) Paytable_Button.onClick.AddListener(delegate { OpenPopup(PaytablePopup_Object); infoscrollbar.value = 1; });
 
         if (PaytableExit_Button) PaytableExit_Button.onClick.RemoveAllListeners();
         if (PaytableExit_Button) PaytableExit_Button.onClick.AddListener(delegate { ClosePopup(PaytablePopup_Object); });

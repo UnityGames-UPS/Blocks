@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Unity.VisualScripting;
+using Best.SocketIO;
 
 public class GameManager : MonoBehaviour
 {
@@ -41,6 +42,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private List<GameObject> RiskContainersWinObject = new List<GameObject>();
     private string CurrentRiskType = "";
+    private string LastSelectedRiskType = "";
     [SerializeField]
     internal List<AutoBetButtons> autoButtons = new List<AutoBetButtons>();
     [SerializeField]
@@ -144,18 +146,19 @@ public class GameManager : MonoBehaviour
         if (autoBet_Stop) autoBet_Stop.onClick.AddListener(delegate { stopAutoBet(); audioManager.PlayBetButtonAudio(); });
 
         if (lowRisk_Button) lowRisk_Button.onClick.RemoveAllListeners();
-        if (lowRisk_Button) lowRisk_Button.onClick.AddListener(delegate { changeRiskFactor("low"); audioManager.PlayWLAudio("toggle"); });
+        if (lowRisk_Button) lowRisk_Button.onClick.AddListener(delegate { changeRiskFactor("low"); audioManager.PlayWLAudio("toggle"); LastSelectedRiskType = "low"; });
 
         if (mediumRisk_Button) mediumRisk_Button.onClick.RemoveAllListeners();
-        if (mediumRisk_Button) mediumRisk_Button.onClick.AddListener(delegate { changeRiskFactor("medium"); audioManager.PlayWLAudio("toggle"); });
+        if (mediumRisk_Button) mediumRisk_Button.onClick.AddListener(delegate { changeRiskFactor("medium"); audioManager.PlayWLAudio("toggle"); LastSelectedRiskType = "medium"; });
 
         if (highRisk_Button) highRisk_Button.onClick.RemoveAllListeners();
-        if (highRisk_Button) highRisk_Button.onClick.AddListener(delegate { changeRiskFactor("high"); audioManager.PlayWLAudio("toggle"); });
+        if (highRisk_Button) highRisk_Button.onClick.AddListener(delegate { changeRiskFactor("high"); audioManager.PlayWLAudio("toggle"); LastSelectedRiskType = "high"; });
 
         if (Turbo_Button) Turbo_Button.onClick.RemoveAllListeners();
         if (Turbo_Button) Turbo_Button.onClick.AddListener(delegate { TurboToggle(); audioManager.PlayButtonAudio(); });
         Manual_text.color = highlightTextsCol;
         ResetMultiplierWinObject();
+        LastSelectedRiskType = "low";
 
 
     }
@@ -232,7 +235,7 @@ public class GameManager : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
         isAutobetInstanceDone = true;
-
+        if(IsTurboOn)  ToggleButtons(true);
         Debug.Log($"########### auto bet playing " + isAutoBetPlaying);
         //CheckWin();
         yield return StartCoroutine(CheckWin());
@@ -349,6 +352,7 @@ public class GameManager : MonoBehaviour
         BetFilled_image.fillAmount = (float)(BetCounter + 1) / (float)socketIoManager.initialData.bets.Count;
 
         currentTotalBet = socketIoManager.initialData.bets[BetCounter];
+        changeRiskFactor(LastSelectedRiskType);
 
     }
 
@@ -372,7 +376,7 @@ public class GameManager : MonoBehaviour
                     int containerMultiplier = 3;
                     for (int i = 0; i < socketIoManager.initialData.multipliers[0].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[0][i].ToString() + "X";
+                        riskContainers[i].text = containerMultiplier + "\n" + (socketIoManager.initialData.multipliers[0][i]*socketIoManager.initialData.bets[BetCounter]).ToString() ;
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }
@@ -392,7 +396,7 @@ public class GameManager : MonoBehaviour
                     int containerMultiplier = 4;
                     for (int i = 0; i < socketIoManager.initialData.multipliers[1].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[1][i].ToString() + "X";
+                        riskContainers[i].text = containerMultiplier + "\n" + (socketIoManager.initialData.multipliers[1][i]*socketIoManager.initialData.bets[BetCounter]).ToString() ;
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }
@@ -410,7 +414,7 @@ public class GameManager : MonoBehaviour
                     int containerMultiplier = 5;
                     for (int i = 0; i < socketIoManager.initialData.multipliers[2].Count; i++)
                     {
-                        riskContainers[i].text = containerMultiplier + "\n" + socketIoManager.initialData.multipliers[2][i].ToString() + "X";
+                        riskContainers[i].text = containerMultiplier + "\n" + (socketIoManager.initialData.multipliers[2][i]*socketIoManager.initialData.bets[BetCounter]).ToString() ;
                         riskContainers[i].transform.parent.gameObject.SetActive(true);
                         containerMultiplier++;
                     }

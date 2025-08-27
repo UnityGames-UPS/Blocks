@@ -567,7 +567,7 @@ public class GameData
     public List<double> bets { get; set; }
     public List<string> risks { get; set; }
     public List<List<int>> resultSymbolMatrix { get; set; }
-    public List<List<int>> multipliers { get; set; }
+    public List<List<double>> multipliers { get; set; }
 }
 
 public class Message
