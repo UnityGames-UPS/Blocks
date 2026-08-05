@@ -87,11 +87,6 @@
         script.onload = () => {
           createUnityInstance(canvas, config, (progress) => {
           }).then((unityInstance) => {
-            window.unityInstance = unityInstance;
-            window.SendMessage = unityInstance.SendMessage.bind(unityInstance);
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage("UnityReady");
-            }
           }).catch((message) => {
             alert(message);
           });
